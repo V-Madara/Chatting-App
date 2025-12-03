@@ -2,28 +2,33 @@ package Code;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 import javax.swing.*;
 import javax.swing.border.*;
 
-public class Clint extends JFrame implements ActionListener, KeyListener {
+public class Client implements ActionListener, KeyListener {
 
     JTextField text;
     JButton send;
-    JPanel a1;
-    Box vertical = Box.createVerticalBox();
+    static JPanel a1;
+    static Box vertical = Box.createVerticalBox();
+    static DataOutputStream dout;
+    static JFrame frame = new JFrame();
 
-    Clint() {
+    Client() {
 
         // Top Green Bar
-        setLayout(null);
+        frame.setLayout(null);
         JPanel p1 = new JPanel();
         p1.setBackground(new Color(7, 94, 84));
         p1.setBounds(0, 0, 450, 70);
         p1.setLayout(null);
-        add(p1);
+        frame.add(p1);
 
         // Creating Back Button and Making it Work
         ImageIcon i1 = new ImageIcon(ClassLoader.getSystemResource("icons/3.png"));
@@ -88,14 +93,14 @@ public class Clint extends JFrame implements ActionListener, KeyListener {
         // Creating New Panel For Text Area
         a1 = new JPanel();
         a1.setBounds(5, 75, 440, 570);
-        add(a1);
+        frame.add(a1);
 
         // Creating TextField
         text = new JTextField();
         text.setBounds(5, 655, 310, 40);
         text.setFont(new Font("SAN_SERIF", Font.BOLD, 16));
         text.addKeyListener(this);
-        add(text);
+        frame.add(text);
 
         // Adding Send Button
         send = new JButton("Send");
@@ -104,14 +109,14 @@ public class Clint extends JFrame implements ActionListener, KeyListener {
         send.setForeground(Color.WHITE);
         send.setFont(new Font("SAN_SERIF", Font.BOLD, 16));
         send.addActionListener(this);
-        add(send);
+        frame.add(send);
 
         // Setting the Frame
-        setSize(450, 700);
-        setLocation(800, 50);
-        setUndecorated(true);
-        getContentPane().setBackground(Color.WHITE);
-        setVisible(true);
+        frame.setSize(450, 700);
+        frame.setLocation(800, 50);
+        frame.setUndecorated(true);
+        frame.getContentPane().setBackground(Color.WHITE);
+        frame.setVisible(true);
     }
 
     public void keyPressed(KeyEvent ae) {
@@ -120,20 +125,26 @@ public class Clint extends JFrame implements ActionListener, KeyListener {
 
         // Example: Close window with ESC
         if (keyCode == KeyEvent.VK_ENTER) {
-            String out = text.getText();
-            JPanel p2 = formateLabel(out);
-            a1.setLayout(new BorderLayout());
-            JPanel right = new JPanel(new BorderLayout());
-            right.add(p2, BorderLayout.LINE_END);
-            vertical.add(right);
-            vertical.add(Box.createVerticalStrut(15));
+            try {
 
-            a1.add(vertical, BorderLayout.PAGE_START);
+                String out = text.getText();
+                JPanel p2 = formateLabel(out);
+                a1.setLayout(new BorderLayout());
+                JPanel right = new JPanel(new BorderLayout());
+                right.add(p2, BorderLayout.LINE_END);
+                vertical.add(right);
+                vertical.add(Box.createVerticalStrut(15));
 
-            text.setText("");
-            repaint();
-            invalidate();
-            validate();
+                a1.add(vertical, BorderLayout.PAGE_START);
+                dout.writeUTF(out);
+
+                text.setText("");
+                frame.repaint();
+                frame.invalidate();
+                frame.validate();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -150,20 +161,26 @@ public class Clint extends JFrame implements ActionListener, KeyListener {
     // Must be overrided after implementing ActionListener
     @Override
     public void actionPerformed(ActionEvent ae) {
-        String out = text.getText();
-        JPanel p2 = formateLabel(out);
-        a1.setLayout(new BorderLayout());
-        JPanel right = new JPanel(new BorderLayout());
-        right.add(p2, BorderLayout.LINE_END);
-        vertical.add(right);
-        vertical.add(Box.createVerticalStrut(15));
+        try {
+            String out = text.getText();
+            JPanel p2 = formateLabel(out);
+            a1.setLayout(new BorderLayout());
+            JPanel right = new JPanel(new BorderLayout());
+            right.add(p2, BorderLayout.LINE_END);
+            vertical.add(right);
+            vertical.add(Box.createVerticalStrut(15));
 
-        a1.add(vertical, BorderLayout.PAGE_START);
+            a1.add(vertical, BorderLayout.PAGE_START);
+            dout.writeUTF(out);
 
-        text.setText("");
-        repaint();
-        invalidate();
-        validate();
+            text.setText("");
+
+            frame.repaint();
+            frame.invalidate();
+            frame.validate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public static JPanel formateLabel(String out) {
@@ -188,6 +205,29 @@ public class Clint extends JFrame implements ActionListener, KeyListener {
     }
 
     public static void main(String[] args) {
-        new Clint();
+        new Client();
+
+        try {
+            Socket s = new Socket("127.0.0.1", 6001);
+            DataInputStream din = new DataInputStream(s.getInputStream());
+            dout = new DataOutputStream(s.getOutputStream());
+
+            while (true) {
+                a1.setLayout(new BorderLayout());
+                String msg = din.readUTF();
+                JPanel panel = formateLabel(msg);
+
+                JPanel left = new JPanel(new BorderLayout());
+                left.add(panel, BorderLayout.LINE_START);
+                vertical.add(left);
+
+                vertical.add(Box.createVerticalStrut(15));
+                a1.add(vertical, BorderLayout.PAGE_START);
+
+                frame.validate();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
